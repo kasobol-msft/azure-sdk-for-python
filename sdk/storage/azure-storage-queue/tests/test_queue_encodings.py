@@ -92,6 +92,12 @@ class StorageQueueEncodingTest(StorageTestCase):
         with self.assertRaises(HttpResponseError):
             queue.send_message(message)
 
+    def on_invalid_message(self, queue_client, message):
+        print("Unable to decode message " + message.id + " " + message.content)
+        if hasattr(message, 'pop_receipt'):
+            queue_client.delete_message(message)
+
+
     @GlobalStorageAccountPreparer()
     def test_message_text_base64(self, resource_group, location, storage_account, storage_account_key):
         # Arrange.
@@ -101,9 +107,12 @@ class StorageQueueEncodingTest(StorageTestCase):
             queue_name=self.get_resource_name(TEST_QUEUE_PREFIX),
             credential=storage_account_key,
             message_encode_policy=TextBase64EncodePolicy(),
-            message_decode_policy=TextBase64DecodePolicy())
+            message_decode_policy=TextBase64DecodePolicy(),
+            invalid_message_hook=self.on_invalid_message)
 
-        message = u'\u0001'
+        messages = queue.receive_messages(20)
+
+        queue.delete_message
 
         # Asserts
         self._validate_encoding(queue, message)
